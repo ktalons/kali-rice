@@ -177,6 +177,25 @@ It asserts a per-file glyph count and then checks every codepoint the repo
 uses against the installed font. Run it after editing any config that carries
 icons.
 
+## A theme is its assets, not its directory
+
+`catppuccin/gtk` ships an `xfwm4/` folder containing nothing but a 380-byte
+`themerc` — no PNGs for borders, corners or buttons. Point xfwm4 at it and you
+get a window manager that draws no title bar and no borders, so **windows
+cannot be moved or resized**. Nothing errors; the desktop just quietly becomes
+unusable, and it looks like the window manager crashed.
+
+`50-xfce.sh` therefore counts image assets rather than testing for the
+directory, and falls back to `Kali-Dark` below 20. If it lands on the fallback
+and you want matching borders, install a real one from
+[catppuccin/xfwm4](https://github.com/catppuccin/xfwm4).
+
+Instant fix if you ever end up with undraggable windows:
+
+```sh
+xfconf-query -c xfwm4 -p /general/theme -s Kali-Dark
+```
+
 ## Licence
 
 MIT.

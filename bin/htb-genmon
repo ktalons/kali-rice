@@ -42,10 +42,22 @@ for p in "${parts[@]}"; do
 done
 
 printf '<txt>%s</txt>\n' "$out"
-printf '<tool>%s</tool>\n' "VPN: ${ip:-down}
-Box: ${box:-none}
+
+# Click opens a real working shell in the current box's directory — not a
+# report that prints and dies. A popup you have to dismiss is worse than no
+# click action at all; a terminal already sitting in ~/htb/boxes/<box> is
+# where the next command was going to be typed anyway.
+if [ -n "$box" ] && [ -d "$HTB_ROOT/boxes/$box" ]; then
+  clickdir="$HTB_ROOT/boxes/$box"
+  clickhint="Click for a shell in boxes/$box"
+else
+  clickdir="$HTB_ROOT"
+  clickhint="Click for a shell in ~/htb  (no box set)"
+fi
+
+printf '<tool>%s</tool>\n' "VPN:    ${ip:-down}
+Box:    ${box:-none}
 Target: ${target:-none}
 
-Click to open the box list."
-# Left click opens the box list in a terminal that stays open.
-printf '<txtclick>%s</txtclick>\n' "kitty -e sh -c 'htb-box --list; echo; printf \"  [any key]\"; read -r _'"
+$clickhint"
+printf '<txtclick>%s</txtclick>\n' "kitty --directory $clickdir"

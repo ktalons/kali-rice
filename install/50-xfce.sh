@@ -70,12 +70,28 @@ if [ -z "$THEME" ]; then
 fi
 ok "found $THEME"
 
+# An xfwm4 theme is its image assets, not its directory. catppuccin/gtk ships
+# an xfwm4/ folder containing nothing but a 380-byte themerc — no PNGs for
+# borders, corners or buttons. Point xfwm4 at it and you get a window manager
+# that draws no title bar and no borders at all, so windows cannot be dragged
+# or resized. Nothing errors; the desktop just quietly becomes unusable.
+#
+# So count the assets. A real theme has ~48 files; anything under 20 is a stub.
+XFWM_ASSETS=0
 if [ -d "$THEME_DIR/xfwm4" ]; then
-  ok "theme ships an xfwm4/ directory — window borders will be themed too"
+  XFWM_ASSETS=$(find "$THEME_DIR/xfwm4" -maxdepth 1 -type f \
+    \( -iname '*.png' -o -iname '*.xpm' \) 2>/dev/null | wc -l | tr -d ' ')
+fi
+
+if [ "$XFWM_ASSETS" -ge 20 ]; then
   XFWM_THEME="$THEME"
+  ok "theme has $XFWM_ASSETS xfwm4 assets — window borders themed to match"
 else
-  warn "theme has no xfwm4/ — falling back to Kali-Dark for window borders"
   XFWM_THEME="Kali-Dark"
+  warn "$THEME has only $XFWM_ASSETS xfwm4 image assets — that is a stub, not a theme."
+  warn "Using Kali-Dark for window borders instead; a border-less xfwm4 leaves"
+  warn "windows that cannot be moved or resized."
+  warn "For matching borders, install a real one: https://github.com/catppuccin/xfwm4"
 fi
 
 ICONS="Papirus-Dark"
@@ -192,10 +208,16 @@ if [ -n "$WALL" ]; then
   n=0
   while read -r prop; do
     [ -n "$prop" ] || continue
-    xfconf-query -c xfce4-desktop -p "$prop" --create -t string -s "$WALL" >/dev/null 2>&1 && n=$((n+1))
+    xfconf-query -c xfce4-desktop -p "$prop" --create -t string -s "$WALL" >/dev/null 2>&1 || continue
+    n=$((n+1))
+    # Setting the image without the style leaves it at whatever the backdrop
+    # was already on — usually centred at native size, which on a 1-to-1
+    # wallpaper shows a small rectangle in a corner. 5 = zoomed to fill.
+    xfconf-query -c xfce4-desktop -p "${prop%last-image}image-style" \
+      --create -t int -s 5 >/dev/null 2>&1 || true
   done < <(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E 'last-image$')
   if [ "$n" -gt 0 ]; then
-    ok "wallpaper set on $n backdrop(s): $(basename "$WALL")"
+    ok "wallpaper set + zoomed on $n backdrop(s): $(basename "$WALL")"
   else
     warn "no backdrop properties found — set the wallpaper by right-clicking the desktop"
   fi
@@ -206,9 +228,11 @@ fi
 # --- restart ---------------------------------------------------------------
 step "applying"
 xfce4-panel -r >/dev/null 2>&1 && ok "panel restarted" || warn "panel restart failed — log out and back in"
-xfwm4 --replace >/dev/null 2>&1 &
-sleep 1
-ok "window manager reloaded"
+# Deliberately no `xfwm4 --replace`. xfwm4 watches xfconf and picks up theme
+# changes live, so a restart buys nothing — and backgrounding it from an
+# install script makes the window manager a child of that script, which dies
+# with it and leaves the session with no WM at all.
+ok "xfwm4 picks up theme changes from xfconf on its own"
 
 printf '\n'
 warn "One manual step left — the HTB indicator."

@@ -12,6 +12,12 @@ format = """
 add_newline = false
 palette = "catppuccin_mocha"
 
+# This VM's disk is a Parallels image on a USB-attached ExFAT volume, so a
+# directory scan can easily blow past starship's 30ms default and print
+# "Scanning current directory timed out" above every prompt.
+scan_timeout = 300
+command_timeout = 1000
+
 [directory]
 style = "bold cyan"
 truncation_length = 4
