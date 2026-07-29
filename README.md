@@ -138,7 +138,24 @@ install/
   40-htb.sh           ~/htb scaffold, commands on PATH, binfmt, wallpaper
 dotfiles/             mirrors $HOME
 bin/                  htb-vpn, htb-box, htb-target, htb-shot, htb-lib.sh
+tools/
+  check-glyphs.sh     asserts every Nerd Font icon exists and is covered
 ```
+
+## Checking the icons
+
+Two things make a missing icon, and neither reports an error: a glyph getting
+dropped from a config during editing, and the font that supplies it not being
+installed (polybar substitutes DejaVu Sans and logs it as a normal load). Both
+look identical on screen — a gap where an icon should be.
+
+```sh
+tools/check-glyphs.sh
+```
+
+It asserts a per-file glyph count and then checks every codepoint the repo
+uses against the installed font. Run it after editing any config that carries
+icons.
 
 ## Licence
 

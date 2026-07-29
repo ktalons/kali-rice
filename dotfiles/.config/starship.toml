@@ -50,7 +50,7 @@ description = "current HTB box"
 command = "cat $HOME/.htb/box"
 when = "test -s $HOME/.htb/box"
 shell = ["sh", "--norc"]
-format = "[ $output](bold #cba6f7) "
+format = "[󰆧 $output](bold #cba6f7) "
 
 [custom.htb_target]
 description = "current HTB target"

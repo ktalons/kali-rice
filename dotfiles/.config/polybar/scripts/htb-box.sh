@@ -5,4 +5,4 @@ set -euo pipefail
 f="${HTB_STATE:-$HOME/.htb}/box"
 [ -s "$f" ] || exit 0
 
-printf '%%{F#cba6f7}%%{F-} %%{F#cdd6f4}%s%%{F-}\n' "$(cat "$f")"
+printf '%%{F#cba6f7}󰆧%%{F-} %%{F#cdd6f4}%s%%{F-}\n' "$(cat "$f")"

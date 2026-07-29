@@ -45,10 +45,10 @@ focus_follows_mouse no
 
 # --- workspaces ------------------------------------------------------------
 set $ws1 "1:󰛳 recon"
-set $ws2 "2: shell"
-set $ws3 "3: notes"
-set $ws4 "4: web"
-set $ws5 "5: burp"
+set $ws2 "2:󰆍 shell"
+set $ws3 "3:󰦨 notes"
+set $ws4 "4:󰖟 web"
+set $ws5 "5:󰃤 burp"
 set $ws6 "6"
 set $ws7 "7"
 set $ws8 "8"
