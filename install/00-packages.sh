@@ -3,15 +3,28 @@
 
 apt_refresh_once
 
-# Kali's own i3 spin. Pulls i3, polybar, picom, rofi, kitty, feh, flameshot,
-# betterlockscreen, thunar, zathura, ranger and the i3-dotfiles package.
-# XFCE is deliberately left installed — both sessions stay at the greeter.
-step "desktop stack (kali-desktop-i3)"
-apt_ensure kali-desktop-i3
+# XFCE is the desktop. It ships with Kali already; these are the pieces the
+# rice actually needs on top of it.
+#
+# kali-desktop-i3 is NOT installed here. The first version of this repo was an
+# i3 rice and it was dropped — see legacy/README.md for why. If i3 is already
+# installed it is left alone and stays selectable at the greeter.
+step "XFCE desktop"
+apt_ensure \
+  xfce4 xfwm4 xfdesktop4 xfce4-panel xfce4-settings xfce4-session \
+  xfce4-notifyd xfce4-appfinder thunar
+
+step "XFCE panel plugins"
+# genmon renders the HTB indicator; whiskermenu is the app menu;
+# panel-profiles is what lets the bootstrap back up your panel layout
+# before touching it.
+apt_ensure \
+  xfce4-genmon-plugin xfce4-whiskermenu-plugin xfce4-panel-profiles \
+  xfce4-pulseaudio-plugin xfce4-power-manager
 
 step "desktop extras"
 apt_ensure \
-  polybar picom rofi feh dunst flameshot kitty \
+  rofi feh flameshot kitty \
   lxappearance papirus-icon-theme qt5ct qt6ct \
   maim xdotool xclip numlockx
 

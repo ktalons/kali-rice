@@ -9,11 +9,23 @@
 DF="$RICE_ROOT/dotfiles"
 
 step "config directories"
-# These are fully ours. Linking the whole directory is what cleanly
-# supersedes the configs Kali's i3-dotfiles package ships.
-for d in i3 polybar picom rofi dunst kitty; do
+# These are fully ours, so linking the whole directory is safe.
+#
+# i3, polybar and picom moved to legacy/ when the desktop switched to XFCE
+# and are deliberately not linked. rofi, dunst and kitty are window-manager
+# agnostic and still earn their place — rofi as a launcher bound to a key,
+# dunst only if you prefer it to xfce4-notifyd.
+for d in rofi kitty; do
   link_file "$DF/.config/$d" "$HOME/.config/$d"
 done
+
+# dunst duplicates xfce4-notifyd, which XFCE starts on its own. Link it only
+# if xfce4-notifyd is absent, otherwise two daemons race for notifications.
+if pkg_installed xfce4-notifyd; then
+  skip "xfce4-notifyd present — not linking dunst"
+else
+  link_file "$DF/.config/dunst" "$HOME/.config/dunst"
+fi
 
 step "individual files"
 link_file "$DF/.config/starship.toml" "$HOME/.config/starship.toml"
@@ -29,6 +41,5 @@ ensure_block "$HOME/.zshrc" '[ -f "$HOME/.zshrc.rice" ] && source "$HOME/.zshrc.
 step "executable bits"
 # git preserves the +x bit, but a fresh checkout on a filesystem that does
 # not (or an archive download) would not. Cheap to assert.
-chmod +x "$RICE_ROOT"/bin/* "$RICE_ROOT"/bootstrap.sh 2>/dev/null || true
-chmod +x "$DF"/.config/polybar/*.sh "$DF"/.config/polybar/scripts/*.sh 2>/dev/null || true
+chmod +x "$RICE_ROOT"/bin/* "$RICE_ROOT"/bootstrap.sh "$RICE_ROOT"/tools/*.sh 2>/dev/null || true
 ok "scripts are executable"

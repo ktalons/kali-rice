@@ -27,13 +27,9 @@ cd "$ROOT"
 # Deliberately a plain list rather than an associative array: macOS ships
 # bash 3.2, which has no `declare -A`, and this needs to run on the host
 # before a commit as well as in the guest.
+# legacy/ is not checked — those configs are no longer linked into $HOME.
 EXPECTED="
-dotfiles/.config/i3/config:5
-dotfiles/.config/polybar/config.ini:5
-dotfiles/.config/polybar/scripts/htb-vpn.sh:2
-dotfiles/.config/polybar/scripts/htb-target.sh:1
-dotfiles/.config/polybar/scripts/htb-box.sh:1
-dotfiles/.config/polybar/scripts/powermenu.sh:4
+bin/htb-genmon:4
 dotfiles/.config/starship.toml:2
 dotfiles/.config/rofi/config.rasi:3
 dotfiles/.tmux.conf:1
@@ -67,9 +63,9 @@ if ! command -v fc-list >/dev/null; then
 else
   # Every distinct codepoint actually used across the repo.
   cps=$(python3 - <<'PY'
-import pathlib
+import pathlib, itertools
 seen=set()
-for p in pathlib.Path('dotfiles').rglob('*'):
+for p in itertools.chain(pathlib.Path('dotfiles').rglob('*'), pathlib.Path('bin').rglob('*')):
     if not p.is_file(): continue
     try: t=p.read_text(encoding='utf-8')
     except Exception: continue

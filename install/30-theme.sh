@@ -1,70 +1,56 @@
 # shellcheck shell=bash
-# GTK / Qt / greeter theming, so the desktop is coherent from login onward
-# and Qt apps do not flash white against everything else.
+# Theme prerequisites that are not XFCE-specific: fetch the Catppuccin GTK
+# theme, point Qt at a matching palette, and theme the greeter.
+#
+# GTK settings and every xfconf property are set by 50-xfce.sh, which runs
+# inside a live session and verifies each one. They are deliberately not
+# duplicated here.
 
-GTK_THEME_NAME="Catppuccin-Mocha-Standard-Lavender-Dark"
+ICONS="Papirus-Dark"
+UIFONT="JetBrainsMono Nerd Font 10"
 THEME_DIR="$HOME/.local/share/themes"
-ICON_THEME="Papirus-Dark"
+
+# Find an installed Catppuccin Mocha theme by pattern, never by a fixed name.
+# catppuccin/gtk has renamed its release assets more than once
+# (Catppuccin-Mocha-Standard-Lavender-Dark -> catppuccin-mocha-mauve-standard+default);
+# a hardcoded name that no longer matches is how this silently did nothing
+# for a whole install.
+find_theme() {
+  local d
+  for d in "$THEME_DIR"/*atppuccin*[Mm]ocha* /usr/share/themes/*atppuccin*[Mm]ocha*; do
+    [ -d "$d" ] || continue
+    case "$d" in *hdpi*) continue ;; esac
+    basename "$d"; return 0
+  done
+  return 1
+}
 
 step "Catppuccin GTK theme"
-# Not packaged in Debian/Kali — it comes from the project's releases.
-if [ -d "$THEME_DIR/$GTK_THEME_NAME" ]; then
-  skip "$GTK_THEME_NAME already installed"
+if THEME=$(find_theme); then
+  ok "found $THEME"
 else
   mkdir -p "$THEME_DIR"
-  GTK_VER="v1.0.3"
-  GTK_URL="https://github.com/catppuccin/gtk/releases/download/${GTK_VER}/${GTK_THEME_NAME}.zip"
-  tmp=$(mktemp -d)
-  if curl -fsSL --retry 3 -o "$tmp/theme.zip" "$GTK_URL"; then
-    unzip -qo "$tmp/theme.zip" -d "$THEME_DIR"
-    ok "installed $GTK_THEME_NAME"
-  else
-    warn "could not download the Catppuccin GTK theme — GTK apps stay on the default"
-    warn "grab it from https://github.com/catppuccin/gtk/releases and unzip into $THEME_DIR"
-    GTK_THEME_NAME=""
-  fi
-  rm -rf "$tmp"
+  warn "no Catppuccin Mocha theme installed."
+  warn "Release asset names change between versions, so this is not downloaded"
+  warn "automatically — grabbing a guessed URL is how you get a silent 404."
+  warn ""
+  warn "  1. https://github.com/catppuccin/gtk/releases"
+  warn "  2. download a *mocha*standard* zip for your accent"
+  warn "  3. unzip -d $THEME_DIR"
+  warn "  4. re-run: ./bootstrap.sh 30 50"
+  THEME=""
 fi
 
-step "GTK settings"
-if [ -n "$GTK_THEME_NAME" ]; then
-  mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"
-  cat > "$HOME/.config/gtk-3.0/settings.ini" <<EOF
-[Settings]
-gtk-theme-name=$GTK_THEME_NAME
-gtk-icon-theme-name=$ICON_THEME
-gtk-font-name=JetBrainsMono Nerd Font 10
-gtk-cursor-theme-name=Adwaita
-gtk-application-prefer-dark-theme=1
-EOF
-  printf 'gtk-theme-name="%s"\ngtk-icon-theme-name="%s"\ngtk-font-name="JetBrainsMono Nerd Font 10"\n' \
-    "$GTK_THEME_NAME" "$ICON_THEME" > "$HOME/.gtkrc-2.0"
-
-  # GTK4 reads the theme from a linked gtk.css rather than settings.ini.
-  if [ -d "$THEME_DIR/$GTK_THEME_NAME/gtk-4.0" ]; then
-    ln -sfn "$THEME_DIR/$GTK_THEME_NAME/gtk-4.0/gtk.css"       "$HOME/.config/gtk-4.0/gtk.css"
-    ln -sfn "$THEME_DIR/$GTK_THEME_NAME/gtk-4.0/gtk-dark.css"  "$HOME/.config/gtk-4.0/gtk-dark.css" 2>/dev/null || true
-  fi
-  ok "GTK 2/3/4 pointed at $GTK_THEME_NAME"
-
-  # XFCE keeps its own copy of these; set them too so the fallback session
-  # does not look broken when you drop back into it.
-  if have xfconf-query; then
-    xfconf-query -c xsettings -p /Net/ThemeName        -s "$GTK_THEME_NAME" 2>/dev/null || true
-    xfconf-query -c xsettings -p /Net/IconThemeName    -s "$ICON_THEME" 2>/dev/null || true
-    ok "XFCE fallback session themed to match"
-  fi
-fi
-
-step "Qt settings"
-# qterminal and other Qt apps ignore GTK entirely. Without this they render
-# in the default light palette against an otherwise dark desktop.
+step "Qt palette"
+# Qt applications ignore GTK theming entirely. Without this they render in
+# the default light palette against an otherwise dark desktop.
+apt_ensure qt5ct qt6ct >/dev/null 2>&1 || true
 mkdir -p "$HOME/.config/qt5ct" "$HOME/.config/qt6ct"
 for v in qt5ct qt6ct; do
   cat > "$HOME/.config/$v/$v.conf" <<EOF
 [Appearance]
 style=Fusion
-icon_theme=$ICON_THEME
+icon_theme=$ICONS
 standard_dialogs=default
 
 [Fonts]
@@ -77,22 +63,28 @@ ok "Qt pointed at qt5ct/qt6ct"
 
 step "lightdm greeter"
 GREETER_CONF=/etc/lightdm/lightdm-gtk-greeter.conf
-if [ -f "$GREETER_CONF" ] && [ -n "$GTK_THEME_NAME" ]; then
-  if sudo grep -q "^theme-name=$GTK_THEME_NAME" "$GREETER_CONF" 2>/dev/null; then
-    skip "greeter already themed"
-  else
-    sudo cp "$GREETER_CONF" "${GREETER_CONF}.kali-rice.bak" 2>/dev/null || true
-    # The greeter runs as its own user and cannot read ~/.local/share/themes,
-    # so the theme has to exist system-wide as well.
-    sudo mkdir -p /usr/share/themes
-    sudo cp -rn "$THEME_DIR/$GTK_THEME_NAME" /usr/share/themes/ 2>/dev/null || true
-    sudo sed -i \
-      -e "s|^#\?theme-name=.*|theme-name=$GTK_THEME_NAME|" \
-      -e "s|^#\?icon-theme-name=.*|icon-theme-name=$ICON_THEME|" \
-      -e "s|^#\?font-name=.*|font-name=JetBrainsMono Nerd Font 10|" \
-      "$GREETER_CONF"
-    ok "greeter themed (backup at ${GREETER_CONF}.kali-rice.bak)"
-  fi
+if [ -z "$THEME" ]; then
+  skip "no theme to apply — skipping greeter"
+elif [ ! -f "$GREETER_CONF" ]; then
+  skip "no lightdm-gtk-greeter.conf present"
+elif sudo grep -q "^theme-name=$THEME\$" "$GREETER_CONF" 2>/dev/null; then
+  skip "greeter already themed"
 else
-  skip "no lightdm-gtk-greeter.conf — skipping greeter"
+  sudo cp -n "$GREETER_CONF" "${GREETER_CONF}.kali-rice.bak" 2>/dev/null || true
+  # The greeter runs as the lightdm user and cannot read your ~/.local, so
+  # the theme has to exist system-wide as well.
+  if [ -d "$THEME_DIR/$THEME" ]; then
+    sudo mkdir -p /usr/share/themes
+    sudo cp -rn "$THEME_DIR/$THEME" /usr/share/themes/ 2>/dev/null || true
+  fi
+  sudo sed -i \
+    -e "s|^#\?theme-name=.*|theme-name=$THEME|" \
+    -e "s|^#\?icon-theme-name=.*|icon-theme-name=$ICONS|" \
+    -e "s|^#\?font-name=.*|font-name=$UIFONT|" \
+    "$GREETER_CONF"
+  if sudo grep -q "^theme-name=$THEME\$" "$GREETER_CONF"; then
+    ok "greeter themed (backup at ${GREETER_CONF}.kali-rice.bak)"
+  else
+    warn "greeter edit did not take — check $GREETER_CONF by hand"
+  fi
 fi

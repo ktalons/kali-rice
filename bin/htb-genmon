@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+#
+# htb-genmon — the whole HTB state as a single xfce4-panel Generic Monitor item.
+#
+# One panel plugin rather than three: less to add by hand, less clutter, and
+# the three values are read together anyway. Renders nothing at all when
+# nothing is set, so the panel stays clean until you are actually on a box.
+#
+# Add it with: right-click panel -> Panel -> Add New Items -> Generic Monitor
+#   Command: htb-genmon      Period: 2s      Label: (leave empty)
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/htb-lib.sh"
+
+GREEN="#a6e3a1"; MAUVE="#cba6f7"; RED="#f38ba8"; DIM="#6c7086"; TEXT="#cdd6f4"
+
+seg() { # colour glyph value
+  printf '<span foreground="%s">%s</span> <span foreground="%s">%s</span>' \
+    "$1" "$2" "$TEXT" "$3"
+}
+
+parts=()
+
+# VPN state comes from the kernel every refresh, never from a cache file.
+ip=$(vpn_ip)
+if [ -n "$ip" ]; then
+  parts+=("$(seg "$GREEN" "󰖂" "$ip")")
+else
+  parts+=("$(printf '<span foreground="%s">󰖂 vpn down</span>' "$DIM")")
+fi
+
+box=$(state_get box)
+[ -n "$box" ] && parts+=("$(seg "$MAUVE" "󰆧" "$box")")
+
+target=$(state_get target)
+[ -n "$target" ] && parts+=("$(seg "$RED" "󰓾" "$target")")
+
+# Join with a dim separator.
+out=""
+for p in "${parts[@]}"; do
+  [ -n "$out" ] && out+="<span foreground=\"$DIM\">  ·  </span>"
+  out+="$p"
+done
+
+printf '<txt>%s</txt>\n' "$out"
+printf '<tool>%s</tool>\n' "VPN: ${ip:-down}
+Box: ${box:-none}
+Target: ${target:-none}
+
+Click to open the box list."
+# Left click opens the box list in a terminal that stays open.
+printf '<txtclick>%s</txtclick>\n' "kitty -e sh -c 'htb-box --list; echo; printf \"  [any key]\"; read -r _'"

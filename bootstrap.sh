@@ -61,4 +61,13 @@ if [ -d "$RICE_BACKUP_DIR" ]; then
 else
   printf '  \033[2mnothing was displaced.\033[0m\n'
 fi
-printf '  \033[2mlog out and pick "i3" at the greeter. XFCE is still there if you want it.\033[0m\n\n'
+
+# A skipped XFCE step is the one failure that looks like success from the
+# outside — everything else ran, but the desktop is untouched. Say so last,
+# where it will actually be read.
+if [ "${RICE_XFCE_SKIPPED:-0}" = "1" ]; then
+  printf '\n  \033[38;5;174m▲ the XFCE step did not run — your desktop is still stock.\033[0m\n'
+  printf '  \033[38;5;180m  log into XFCE, then: ./bootstrap.sh 50\033[0m\n\n'
+else
+  printf '  \033[2mlog out and pick "Xfce Session" at the greeter.\033[0m\n\n'
+fi
