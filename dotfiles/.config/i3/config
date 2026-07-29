@@ -43,6 +43,17 @@ smart_borders on
 
 focus_follows_mouse no
 
+# New windows stack as tabs instead of splitting the screen. Each window gets
+# the full workspace and i3 draws a clickable tab bar across the top of the
+# container. Opening a GUI tool next to a terminal no longer squeezes both.
+#
+# The tab bar is always at the TOP of its container — i3 has no option to move
+# it to the bottom. Per-workspace overrides are still one key away:
+#   $mod+Shift+f   back to a side-by-side split
+#   $mod+s         stacking (vertical list instead of tabs)
+#   $mod+Shift+s   back to tabbed
+workspace_layout tabbed
+
 # --- workspaces ------------------------------------------------------------
 set $ws1 "1:󰛳 recon"
 set $ws2 "2:󰆍 shell"

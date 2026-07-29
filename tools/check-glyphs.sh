@@ -29,7 +29,7 @@ cd "$ROOT"
 # before a commit as well as in the guest.
 EXPECTED="
 dotfiles/.config/i3/config:5
-dotfiles/.config/polybar/config.ini:4
+dotfiles/.config/polybar/config.ini:5
 dotfiles/.config/polybar/scripts/htb-vpn.sh:2
 dotfiles/.config/polybar/scripts/htb-target.sh:1
 dotfiles/.config/polybar/scripts/htb-box.sh:1
