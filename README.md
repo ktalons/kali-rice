@@ -91,6 +91,12 @@ mid-box.
 
 ## Parallels notes
 
+- **Guest Tools will not install on a stock Kali rolling.** It marks `libfuse2`
+  mandatory, and fuse 2.x is gone from Debian testing, so neither `libfuse2` nor
+  the time64 rename `libfuse2t64` resolves. `05-parallels.sh` supplies
+  `libfuse.so.2` from Debian trixie ahead of time, which is what the installer
+  actually checks for. Run `./bootstrap.sh 05` before mounting the Tools ISO.
+  Full root cause and the fallback that skips shared folders are in `CLAUDE.md`.
 - **Kitty renders through OpenGL.** With 3D acceleration off it falls back to
   `llvmpipe` software rendering — usable, not snappy. Check with
   `glxinfo -B | grep -i "OpenGL renderer"`. If you are on llvmpipe, either
@@ -125,6 +131,7 @@ bootstrap.sh          idempotent entrypoint
 install/
   lib.sh              guards: pkg_installed, link_file, ensure_block, git_ensure
   00-packages.sh      i3 stack, CLI tools, Nerd Font, qemu-user-binfmt, zram
+  05-parallels.sh     Guest Tools prerequisites (dkms, headers, libfuse.so.2)
   10-shell.sh         oh-my-zsh, plugins, starship, tpm
   20-link.sh          backup-then-symlink into $HOME
   30-theme.sh         GTK/Qt/greeter
