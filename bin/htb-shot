@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+#
+# htb-shot — screenshot straight into the current box's screenshots/ dir.
+#
+#   htb-shot          region select (flameshot GUI)
+#   htb-shot full     whole screen, no prompt
+#
+# Falls back to ~/Pictures when no box is set, so it never silently drops a
+# capture on the floor.
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/htb-lib.sh"
+
+box=$(state_get box)
+if [ -n "$box" ] && [ -d "$HTB_ROOT/boxes/$box" ]; then
+  dest="$HTB_ROOT/boxes/$box/screenshots"
+else
+  dest="$HOME/Pictures"
+fi
+mkdir -p "$dest"
+
+stamp=$(date +%Y%m%d-%H%M%S)
+
+if command -v flameshot >/dev/null; then
+  case "${1:-region}" in
+    full) flameshot full  --path "$dest/$stamp.png" ;;
+    *)    flameshot gui   --path "$dest/$stamp.png" ;;
+  esac
+elif command -v maim >/dev/null; then
+  case "${1:-region}" in
+    full) maim "$dest/$stamp.png" ;;
+    *)    maim --select "$dest/$stamp.png" ;;
+  esac
+else
+  hdie "neither flameshot nor maim is installed"
+fi
+
+# flameshot exits 0 even when the capture is cancelled, so check for the file.
+if [ -f "$dest/$stamp.png" ]; then
+  hok "saved $dest/$stamp.png"
+  command -v xclip >/dev/null && printf '%s' "$dest/$stamp.png" | xclip -selection clipboard
+else
+  printf '  %scancelled%s\n' "$C_DIM" "$C_RESET"
+fi

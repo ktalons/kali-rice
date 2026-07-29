@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+#
+# htb-vpn — bring the HTB VPN up or down and report what actually happened.
+#
+#   htb-vpn up [config.ovpn]   connect (defaults to the last config used)
+#   htb-vpn down               disconnect
+#   htb-vpn status             show interface + IP
+#   htb-vpn ip                 print just the IP (for scripts/polybar)
+#
+# Configs live in ~/htb/vpn/. Put your .ovpn there and `htb-vpn up` will
+# find it if there is exactly one.
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/htb-lib.sh"
+
+VPN_DIR="$HTB_ROOT/vpn"
+PIDFILE="$HTB_STATE/vpn.pid"
+LOGFILE="$HTB_STATE/vpn.log"
+TIMEOUT=40
+
+usage() { sed -n '3,12p' "$0" | sed 's/^# \?//'; exit "${1:-0}"; }
+
+resolve_config() {
+  local want="${1:-}"
+  if [ -n "$want" ]; then
+    [ -r "$want" ] && { readlink -f "$want"; return; }
+    [ -r "$VPN_DIR/$want" ] && { readlink -f "$VPN_DIR/$want"; return; }
+    hdie "no such config: $want"
+  fi
+  # Reuse the last one if it is still there.
+  local last; last=$(state_get vpn.config)
+  [ -n "$last" ] && [ -r "$last" ] && { printf '%s' "$last"; return; }
+
+  mkdir -p "$VPN_DIR"
+  local found=()
+  while IFS= read -r -d '' f; do found+=("$f"); done \
+    < <(find "$VPN_DIR" -maxdepth 1 -type f -name '*.ovpn' -print0 2>/dev/null)
+
+  case ${#found[@]} in
+    1) readlink -f "${found[0]}" ;;
+    0) hdie "no .ovpn found. Download yours from HTB and drop it in $VPN_DIR/" ;;
+    *) hdie "several configs in $VPN_DIR — name one: htb-vpn up $(basename "${found[0]}")" ;;
+  esac
+}
+
+cmd_status() {
+  local ifc ip
+  ifc=$(vpn_iface); ip=$(vpn_ip)
+  if [ -n "$ifc" ] && [ -n "$ip" ]; then
+    hok "$ifc up — $ip"
+    local cfg; cfg=$(state_get vpn.config)
+    [ -n "$cfg" ] && printf '  %sconfig: %s%s\n' "$C_DIM" "$(basename "$cfg")" "$C_RESET"
+    return 0
+  fi
+  printf '  %sVPN down%s\n' "$C_DIM" "$C_RESET"
+  return 1
+}
+
+cmd_up() {
+  if [ -n "$(vpn_iface)" ]; then
+    hwarn "already connected"
+    cmd_status
+    return 0
+  fi
+
+  local cfg; cfg=$(resolve_config "${1:-}")
+  hsay "connecting via $(basename "$cfg")"
+
+  : > "$LOGFILE"
+  sudo openvpn --config "$cfg" \
+               --daemon htb-vpn \
+               --writepid "$PIDFILE" \
+               --log "$LOGFILE" \
+    || hdie "openvpn failed to start — see $LOGFILE"
+
+  state_set vpn.config "$cfg"
+
+  # Poll for the interface rather than trusting openvpn's exit code. It
+  # daemonises immediately and exits 0 long before the tunnel is usable.
+  local waited=0
+  while [ "$waited" -lt "$TIMEOUT" ]; do
+    if [ -n "$(vpn_ip)" ]; then
+      hok "$(vpn_iface) up — $(vpn_ip)"
+      return 0
+    fi
+    if grep -qiE 'AUTH_FAILED|Cannot resolve|TLS Error|Exiting due to fatal error' "$LOGFILE" 2>/dev/null; then
+      hdie "openvpn reported a fatal error:
+$(grep -iE 'AUTH_FAILED|Cannot resolve|TLS Error|fatal' "$LOGFILE" | tail -3)"
+    fi
+    sleep 1; waited=$((waited + 1))
+  done
+
+  hdie "no tunnel after ${TIMEOUT}s. Last lines of $LOGFILE:
+$(tail -5 "$LOGFILE" 2>/dev/null)"
+}
+
+cmd_down() {
+  if [ -z "$(vpn_iface)" ] && [ ! -s "$PIDFILE" ]; then
+    printf '  %salready down%s\n' "$C_DIM" "$C_RESET"
+    return 0
+  fi
+
+  if [ -s "$PIDFILE" ]; then
+    sudo kill "$(cat "$PIDFILE")" 2>/dev/null || true
+  else
+    hwarn "no pidfile — stopping every openvpn process"
+    sudo pkill -f 'openvpn --config' 2>/dev/null || true
+  fi
+
+  local waited=0
+  while [ "$waited" -lt 15 ]; do
+    [ -z "$(vpn_iface)" ] && { sudo rm -f "$PIDFILE"; hok "disconnected"; return 0; }
+    sleep 1; waited=$((waited + 1))
+  done
+  hdie "tunnel still up after 15s — check 'ps aux | grep openvpn'"
+}
+
+case "${1:-status}" in
+  up|connect|start) shift; cmd_up "${1:-}" ;;
+  down|dc|stop)     cmd_down ;;
+  status|st)        cmd_status ;;
+  ip)               vpn_ip ;;
+  -h|--help|help)   usage ;;
+  *.ovpn)           cmd_up "$1" ;;
+  *)                usage 1 ;;
+esac

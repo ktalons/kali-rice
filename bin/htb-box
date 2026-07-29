@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+#
+# htb-box — scaffold and switch to a box's working directory.
+#
+#   htb-box cicada           scaffold if needed, make current, open tmux
+#   htb-box --no-tmux name   scaffold and make current, no tmux
+#   htb-box                  print the current box
+#   htb-box --list           list every box
+#   htb-box --clear          unset the current box
+#
+# Creates ~/htb/boxes/<name>/{nmap,loot,exploits,screenshots,notes.md}
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/htb-lib.sh"
+
+usage() { sed -n '3,12p' "$0" | sed 's/^# \?//'; exit "${1:-0}"; }
+
+scaffold() {
+  local name="$1" dir="$HTB_ROOT/boxes/$1"
+  if [ -d "$dir" ]; then
+    printf '  %sexisting box%s %s\n' "$C_DIM" "$C_RESET" "$dir"
+  else
+    mkdir -p "$dir"/{nmap,loot,exploits,screenshots}
+    hok "created $dir"
+  fi
+  # Never clobber notes that already exist.
+  if [ ! -f "$dir/notes.md" ]; then
+    cat > "$dir/notes.md" <<EOF
+# $name
+
+- started: $(date +%Y-%m-%d)
+- target:  $(state_get target)
+
+## Recon
+
+## Foothold
+
+## Privesc
+
+## Loot
+
+## Lessons
+EOF
+    hok "created notes.md"
+  fi
+}
+
+open_tmux() {
+  local name="$1" dir="$HTB_ROOT/boxes/$1"
+  local session="htb-$name"
+
+  if ! have_tmux; then
+    hwarn "tmux not installed — skipping layout"
+    return 0
+  fi
+
+  if tmux has-session -t "=$session" 2>/dev/null; then
+    printf '  %sattaching to existing session%s\n' "$C_DIM" "$C_RESET"
+  else
+    # Left pane for scanning, right column split into a shell (listeners,
+    # shells) and notes. Matches how a box actually gets worked.
+    tmux new-session  -d -s "$session" -n work -c "$dir"
+    tmux split-window -h -t "$session:work" -c "$dir" -p 40
+    tmux split-window -v -t "$session:work.1" -c "$dir" -p 55
+    tmux select-pane  -t "$session:work.0"
+    hok "tmux session $session"
+  fi
+
+  if [ -n "${TMUX:-}" ]; then
+    tmux switch-client -t "$session"
+  else
+    tmux attach-session -t "$session"
+  fi
+}
+
+have_tmux() { command -v tmux >/dev/null 2>&1; }
+
+no_tmux=0
+case "${1:-}" in
+  "")
+    box=$(state_get box)
+    [ -n "$box" ] || { printf '  %sno box set%s\n' "$C_DIM" "$C_RESET"; exit 1; }
+    hok "box  $box"
+    printf '  %s%s%s\n' "$C_DIM" "$HTB_ROOT/boxes/$box" "$C_RESET"
+    exit 0
+    ;;
+  -h|--help) usage ;;
+  --list|-l)
+    mkdir -p "$HTB_ROOT/boxes"
+    current=$(state_get box)
+    found=0
+    for d in "$HTB_ROOT"/boxes/*/; do
+      [ -d "$d" ] || continue
+      found=1
+      n=$(basename "$d")
+      if [ "$n" = "$current" ]; then
+        printf '  %s● %s%s\n' "$C_GREEN" "$n" "$C_RESET"
+      else
+        printf '    %s\n' "$n"
+      fi
+    done
+    [ "$found" -eq 1 ] || printf '  %sno boxes yet%s\n' "$C_DIM" "$C_RESET"
+    exit 0
+    ;;
+  --clear)
+    state_clear box
+    hok "box cleared"
+    exit 0
+    ;;
+  --no-tmux) no_tmux=1; shift ;;
+  -*) usage 1 ;;
+esac
+
+name="${1:-}"
+[ -n "$name" ] || usage 1
+valid_name "$name" || hdie "refusing '$name' — letters, digits, dot, dash, underscore only"
+
+scaffold "$name"
+state_set box "$name"
+hok "box  $name"
+
+[ "$no_tmux" -eq 1 ] || open_tmux "$name"

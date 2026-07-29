@@ -1,0 +1,86 @@
+# kali-rice — zsh layer
+#
+# Sourced from the bottom of Kali's stock ~/.zshrc, so Kali's defaults stay
+# intact and survive package upgrades. Everything here layers on top.
+
+# --- path ------------------------------------------------------------------
+export PATH="$HOME/.local/bin:$PATH"
+
+# --- oh-my-zsh -------------------------------------------------------------
+export ZSH="$HOME/.oh-my-zsh"
+# Starship owns the prompt; oh-my-zsh's theme would only fight it.
+ZSH_THEME=""
+DISABLE_AUTO_UPDATE="true"
+ZSH_DISABLE_COMPFIX="true"
+
+plugins=(
+  git
+  sudo
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
+
+[ -f "$ZSH/oh-my-zsh.sh" ] && source "$ZSH/oh-my-zsh.sh"
+
+# Must come after zsh-syntax-highlighting loads — it only sets the style map.
+_cat_hl="$ZSH/custom/plugins/catppuccin-zsh-syntax-highlighting/themes/catppuccin_mocha-zsh-syntax-highlighting.zsh"
+[ -f "$_cat_hl" ] && source "$_cat_hl"
+unset _cat_hl
+
+# --- tools -----------------------------------------------------------------
+command -v zoxide   >/dev/null && eval "$(zoxide init zsh)"
+command -v starship >/dev/null && eval "$(starship init zsh)"
+
+if command -v fzf >/dev/null; then
+  # fzf >= 0.48 ships its own shell integration.
+  eval "$(fzf --zsh)" 2>/dev/null || {
+    [ -f /usr/share/doc/fzf/examples/key-bindings.zsh ] && source /usr/share/doc/fzf/examples/key-bindings.zsh
+    [ -f /usr/share/doc/fzf/examples/completion.zsh ]   && source /usr/share/doc/fzf/examples/completion.zsh
+  }
+fi
+
+# --- aliases ---------------------------------------------------------------
+if command -v eza >/dev/null; then
+  alias ls='eza --group-directories-first --icons'
+  alias ll='eza -lg --group-directories-first --icons --git'
+  alias la='eza -lag --group-directories-first --icons --git'
+  alias lt='eza --tree --level=2 --icons'
+fi
+command -v batcat >/dev/null && alias cat='batcat --paging=never'
+command -v bat    >/dev/null && alias cat='bat --paging=never'
+command -v fdfind >/dev/null && alias fd='fdfind'
+
+alias ip4='ip -4 -brief addr'
+alias ports='ss -tulpn'
+alias serve='python3 -m http.server 8000'
+
+# --- HTB -------------------------------------------------------------------
+export HTB_ROOT="${HTB_ROOT:-$HOME/htb}"
+export HTB_STATE="${HTB_STATE:-$HOME/.htb}"
+
+# Keep $TARGET and $BOX in sync with whatever htb-target/htb-box last set,
+# including changes made in a different pane. Re-read before each prompt —
+# these are two tiny file reads, not a subprocess.
+_htb_sync() {
+  if [ -r "$HTB_STATE/target" ]; then
+    TARGET=$(<"$HTB_STATE/target"); export TARGET
+  else
+    unset TARGET
+  fi
+  if [ -r "$HTB_STATE/box" ]; then
+    BOX=$(<"$HTB_STATE/box"); export BOX
+  else
+    unset BOX
+  fi
+}
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd _htb_sync
+_htb_sync
+
+# Jump to the current box directory.
+cdb() {
+  [ -n "${BOX:-}" ] || { print -u2 "no box set — run: htb-box <name>"; return 1; }
+  cd "$HTB_ROOT/boxes/$BOX" || return 1
+}
+
+alias t='echo "${TARGET:-<unset>}"'

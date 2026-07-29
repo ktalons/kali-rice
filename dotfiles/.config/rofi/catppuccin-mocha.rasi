@@ -1,0 +1,95 @@
+// kali-rice — Catppuccin Mocha for rofi
+* {
+    base:       #1e1e2e;
+    mantle:     #181825;
+    crust:      #11111b;
+    surface0:   #313244;
+    surface1:   #45475a;
+    surface2:   #585b70;
+    overlay0:   #6c7086;
+    text:       #cdd6f4;
+    subtext0:   #a6adc8;
+    lavender:   #b4befe;
+    mauve:      #cba6f7;
+    red:        #f38ba8;
+
+    background-color:   transparent;
+    text-color:         @text;
+    margin:             0;
+    padding:            0;
+    spacing:            0;
+}
+
+window {
+    background-color:   @base;
+    border:             2px;
+    border-color:       @lavender;
+    border-radius:      10px;
+    width:              44%;
+    padding:            0;
+}
+
+mainbox {
+    padding:            12px;
+    spacing:            10px;
+}
+
+inputbar {
+    background-color:   @surface0;
+    border-radius:      8px;
+    padding:            10px 14px;
+    spacing:            10px;
+    children:           [ prompt, entry ];
+}
+
+prompt {
+    text-color:         @mauve;
+}
+
+entry {
+    placeholder:        "search";
+    placeholder-color:  @overlay0;
+}
+
+listview {
+    lines:              9;
+    columns:            1;
+    fixed-height:       false;
+    scrollbar:          false;
+    spacing:            2px;
+}
+
+element {
+    padding:            9px 12px;
+    border-radius:      8px;
+    spacing:            10px;
+}
+
+element normal normal   { text-color: @subtext0; }
+element alternate normal { text-color: @subtext0; }
+
+element selected normal,
+element selected active {
+    background-color:   @surface1;
+    text-color:         @lavender;
+}
+
+element-icon {
+    size:               1.1em;
+    vertical-align:     0.5;
+}
+
+element-text {
+    vertical-align:     0.5;
+    text-color:         inherit;
+}
+
+message {
+    background-color:   @surface0;
+    border-radius:      8px;
+    padding:            8px 12px;
+}
+
+textbox {
+    text-color:         @text;
+}

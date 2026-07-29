@@ -1,0 +1,180 @@
+# kali-rice — i3
+# Catppuccin Mocha. Workspaces are named for how a box actually gets worked.
+
+set $mod Mod4
+set $term kitty
+set $alt Mod1
+
+# --- Catppuccin Mocha ------------------------------------------------------
+set $rosewater #f5e0dc
+set $mauve     #cba6f7
+set $red       #f38ba8
+set $peach     #fab387
+set $green     #a6e3a1
+set $blue      #89b4fa
+set $lavender  #b4befe
+set $text      #cdd6f4
+set $subtext0  #a6adc8
+set $overlay0  #6c7086
+set $surface0  #313244
+set $surface1  #45475a
+set $base      #1e1e2e
+set $crust     #11111b
+
+# class                 border    backgr.   text    indicator child_border
+client.focused          $lavender $base     $text   $rosewater $lavender
+client.focused_inactive $surface0 $base     $text   $surface0  $surface0
+client.unfocused        $surface0 $base     $subtext0 $surface0 $surface0
+client.urgent           $peach    $base     $peach  $overlay0  $peach
+client.placeholder      $overlay0 $base     $text   $overlay0  $overlay0
+client.background       $base
+
+# --- look ------------------------------------------------------------------
+font pango:JetBrainsMono Nerd Font 10
+
+default_border pixel 2
+default_floating_border pixel 2
+hide_edge_borders smart
+
+gaps inner 8
+gaps outer 4
+smart_gaps on
+smart_borders on
+
+focus_follows_mouse no
+
+# --- workspaces ------------------------------------------------------------
+set $ws1 "1:󰛳 recon"
+set $ws2 "2: shell"
+set $ws3 "3: notes"
+set $ws4 "4: web"
+set $ws5 "5: burp"
+set $ws6 "6"
+set $ws7 "7"
+set $ws8 "8"
+set $ws9 "9"
+set $ws10 "10"
+
+bindsym $mod+1 workspace number $ws1
+bindsym $mod+2 workspace number $ws2
+bindsym $mod+3 workspace number $ws3
+bindsym $mod+4 workspace number $ws4
+bindsym $mod+5 workspace number $ws5
+bindsym $mod+6 workspace number $ws6
+bindsym $mod+7 workspace number $ws7
+bindsym $mod+8 workspace number $ws8
+bindsym $mod+9 workspace number $ws9
+bindsym $mod+0 workspace number $ws10
+
+bindsym $mod+Shift+1 move container to workspace number $ws1
+bindsym $mod+Shift+2 move container to workspace number $ws2
+bindsym $mod+Shift+3 move container to workspace number $ws3
+bindsym $mod+Shift+4 move container to workspace number $ws4
+bindsym $mod+Shift+5 move container to workspace number $ws5
+bindsym $mod+Shift+6 move container to workspace number $ws6
+bindsym $mod+Shift+7 move container to workspace number $ws7
+bindsym $mod+Shift+8 move container to workspace number $ws8
+bindsym $mod+Shift+9 move container to workspace number $ws9
+bindsym $mod+Shift+0 move container to workspace number $ws10
+
+bindsym $mod+Tab workspace back_and_forth
+
+# Send the heavy GUI tools where they belong.
+assign [class="(?i)burp"]           $ws5
+assign [class="(?i)firefox"]        $ws4
+for_window [class="(?i)burp"]       focus
+for_window [window_role="pop-up"]   floating enable
+for_window [window_type="dialog"]   floating enable
+for_window [class="(?i)flameshot"]  floating enable, border none
+
+# --- launching -------------------------------------------------------------
+bindsym $mod+Return exec --no-startup-id $term
+bindsym $mod+Shift+Return exec --no-startup-id $term --class floatterm
+for_window [class="floatterm"] floating enable, resize set 900 550
+
+bindsym $mod+d exec --no-startup-id rofi -show drun
+bindsym $mod+space exec --no-startup-id rofi -show drun
+bindsym $mod+Shift+d exec --no-startup-id rofi -show run
+bindsym $mod+w exec --no-startup-id rofi -show window
+bindsym $mod+e exec --no-startup-id thunar
+bindsym $mod+b exec --no-startup-id firefox
+
+bindsym $mod+q kill
+bindsym $mod+Shift+q kill
+
+# --- HTB -------------------------------------------------------------------
+# Screenshot lands in the current box's screenshots/ dir and the path goes
+# to the clipboard.
+bindsym Print          exec --no-startup-id htb-shot
+bindsym Shift+Print    exec --no-startup-id htb-shot full
+bindsym $mod+Print     exec --no-startup-id htb-shot
+
+# Prompt for a target / box without leaving the keyboard.
+bindsym $mod+t exec --no-startup-id sh -c 'v=$(rofi -dmenu -p "target" -theme-str "entry{placeholder:\"10.10.11.x\";}") && [ -n "$v" ] && htb-target "$v"'
+bindsym $mod+Shift+b exec --no-startup-id sh -c 'v=$(rofi -dmenu -p "box") && [ -n "$v" ] && kitty -e htb-box "$v"'
+bindsym $mod+v exec --no-startup-id $term --class floatterm -e sh -c 'htb-vpn status; echo; read -r _'
+
+# --- focus / move ----------------------------------------------------------
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# --- layout ----------------------------------------------------------------
+bindsym $mod+g split h
+bindsym $mod+n split v
+bindsym $mod+f fullscreen toggle
+bindsym $mod+s layout stacking
+bindsym $mod+Shift+s layout tabbed
+bindsym $mod+Shift+f layout toggle split
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+a focus parent
+
+mode "resize" {
+    bindsym h resize shrink width 5 px or 5 ppt
+    bindsym j resize grow height 5 px or 5 ppt
+    bindsym k resize shrink height 5 px or 5 ppt
+    bindsym l resize grow width 5 px or 5 ppt
+    bindsym Left resize shrink width 5 px or 5 ppt
+    bindsym Down resize grow height 5 px or 5 ppt
+    bindsym Up resize shrink height 5 px or 5 ppt
+    bindsym Right resize grow width 5 px or 5 ppt
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
+
+floating_modifier $mod
+tiling_drag modifier titlebar
+
+# --- system ----------------------------------------------------------------
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+r restart
+bindsym $mod+Shift+e exec --no-startup-id "i3-nagbar -t warning -m 'Exit i3?' -B 'Yes' 'i3-msg exit'"
+bindsym $mod+Escape exec --no-startup-id betterlockscreen -l dim
+
+bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym XF86AudioMute        exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle
+
+# --- autostart -------------------------------------------------------------
+exec_always --no-startup-id ~/.config/polybar/launch.sh
+exec_always --no-startup-id ~/.config/i3/setwallpaper.sh
+exec --no-startup-id picom --config ~/.config/picom/picom.conf
+exec --no-startup-id dunst
+exec --no-startup-id numlockx on
+exec --no-startup-id nm-applet
+exec --no-startup-id xfce4-power-manager
