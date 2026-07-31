@@ -23,10 +23,34 @@ apt_ensure \
   xfce4-pulseaudio-plugin xfce4-power-manager
 
 step "desktop extras"
+# numlockx and autocutsel are session plumbing for this VM, not eye candy:
+# numlockx makes the numpad type digits (Mac keyboards have no NumLock key,
+# and the guest comes up with it off), autocutsel re-owns the clipboard after
+# every copy so prlcp can read it — kitty and xclip copies never reach the
+# macOS side without it. Both are started by autostart entries linked in
+# 20-link.sh; the greeter half of numlock is the lightdm drop-in below.
 apt_ensure \
   rofi feh flameshot kitty \
   lxappearance papirus-icon-theme qt5ct qt6ct \
-  maim xdotool xclip numlockx
+  maim xdotool xclip numlockx autocutsel
+
+step "greeter NumLock"
+# lightdm runs greeter-setup-script as the X server comes up, so NumLock is
+# already on at the password prompt and the state carries into the session.
+# The autostart entry then re-asserts it anyway — either alone would usually
+# do, but this one also covers typing the password on the numpad-adjacent
+# keys right after boot.
+NUMLOCK_CONF=/etc/lightdm/lightdm.conf.d/60-kali-rice-numlock.conf
+if [ ! -d /etc/lightdm ]; then
+  skip "no lightdm — skipping greeter NumLock"
+elif [ -f "$NUMLOCK_CONF" ]; then
+  skip "greeter NumLock drop-in already present"
+else
+  sudo mkdir -p /etc/lightdm/lightdm.conf.d
+  printf '[Seat:*]\ngreeter-setup-script=/usr/bin/numlockx on\n' \
+    | sudo tee "$NUMLOCK_CONF" >/dev/null
+  ok "greeter NumLock drop-in written: $NUMLOCK_CONF"
+fi
 
 step "CLI tooling"
 apt_ensure \

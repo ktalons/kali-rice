@@ -31,6 +31,18 @@ step "individual files"
 link_file "$DF/.config/starship.toml" "$HOME/.config/starship.toml"
 link_file "$DF/.tmux.conf"            "$HOME/.tmux.conf"
 
+step "session autostart"
+# ~/.config/autostart is shared with everything else that autostarts, so link
+# file-by-file, never the directory.
+#
+#   numlockx.desktop    the XFCE replacement for the i3 `exec numlockx on` —
+#                       without it the numpad navigates instead of typing
+#   autocutsel.desktop  re-owns the clipboard after every copy so prlcp can
+#                       read it — kitty/xclip copies never reach macOS otherwise
+for f in numlockx.desktop autocutsel.desktop; do
+  link_file "$DF/.config/autostart/$f" "$HOME/.config/autostart/$f"
+done
+
 step "zsh"
 # Kali ships a substantial default .zshrc. Rather than replace it wholesale,
 # append a fenced block that sources ours — so Kali's defaults survive an

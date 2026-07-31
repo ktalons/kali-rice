@@ -1,0 +1,12 @@
+# kali-rice — turn NumLock on at session start.
+#
+# The i3 rice did this with `exec numlockx on`; this entry is the XFCE
+# equivalent, and it went missing in the i3 -> XFCE move. Without it the
+# guest comes up with NumLock off — Mac keyboards have no NumLock key to
+# press — and the numpad navigates instead of typing digits.
+[Desktop Entry]
+Type=Application
+Name=NumLock on
+Exec=numlockx on
+StartupNotify=false
+Terminal=false

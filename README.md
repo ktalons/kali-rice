@@ -113,6 +113,17 @@ mid-box.
   `libfuse.so.2` from Debian trixie ahead of time, which is what the installer
   actually checks for. Run `./bootstrap.sh 05` before mounting the Tools ISO.
   Full root cause and the fallback that skips shared folders are in `CLAUDE.md`.
+- **Clipboard needs a bridge to actually cross over.** prlcp, the Tools
+  clipboard daemon, transfers copies made in GTK apps (xfce4-terminal,
+  Firefox) but not copies owned by kitty or xclip — those work inside the
+  guest and silently never reach macOS. `autocutsel` autostarts with the
+  session and re-owns the clipboard after every copy, so prlcp always has an
+  owner it can read from. If copies stop crossing over, check
+  `pgrep -a autocutsel` before blaming kitty.
+- **NumLock is off until something turns it on.** Mac keyboards have no
+  NumLock key, so the numpad navigates instead of typing digits. `numlockx on`
+  runs from a lightdm drop-in at the greeter and again as a session autostart
+  entry.
 - **Kitty renders through OpenGL.** With 3D acceleration off it falls back to
   `llvmpipe` software rendering — usable, not snappy. Check with
   `glxinfo -B | grep -i "OpenGL renderer"` (`sudo apt install mesa-utils`). If
@@ -154,7 +165,7 @@ install/
   30-theme.sh         Catppuccin discovery, Qt palette, greeter
   40-htb.sh           ~/htb scaffold, commands on PATH, binfmt, wallpaper
   50-xfce.sh          xfconf theming, bottom taskbar  [needs a live session]
-dotfiles/             mirrors $HOME (rofi, kitty, starship, tmux, zsh)
+dotfiles/             mirrors $HOME (rofi, kitty, starship, tmux, zsh, autostart)
 bin/                  htb-vpn, htb-box, htb-target, htb-shot, htb-genmon
 legacy/               the dropped i3 rice — see legacy/README.md
 tools/

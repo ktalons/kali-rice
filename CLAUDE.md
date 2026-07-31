@@ -78,6 +78,26 @@ Line 120 is correct for 26.4.0.57513 specifically. Everything installs;
 `prl_fsd` then fails to start for lack of the library, so shared folders do not
 work. This has to be redone on every Tools update.
 
+## Two session gotchas left over from the i3 → XFCE move
+
+**Numpad types nothing.** The i3 config ran `exec numlockx on`; the XFCE
+session had no equivalent, so NumLock stayed off (Mac keyboards can't turn it
+on) and the numpad sent Home/End/arrows. Fixed twice over: a lightdm drop-in
+written by `00-packages.sh` (`/etc/lightdm/lightdm.conf.d/60-kali-rice-numlock.conf`)
+turns it on at the greeter, and `~/.config/autostart/numlockx.desktop`
+(linked by `20-link.sh`) re-asserts it per session.
+
+**Copies from kitty and xclip never reach macOS.** prlcp transfers clipboard
+contents owned by GTK apps but not by kitty or xclip — copy works inside the
+guest and silently never crosses to the host, which also broke `htb-shot`'s
+path-to-clipboard. `autocutsel -selection CLIPBOARD` (autostarted) re-owns
+the clipboard after every copy so prlcp always reads from an owner it
+understands. kitty's `copy_on_select clipboard` was never the problem; check
+`pgrep -a autocutsel` before touching kitty.conf.
+
+*Both diagnosed 2026-07-31; the numlock line and the clipboard behavior were
+casualties of the desktop switch in commit 55a4063.*
+
 ## General
 
 - Package availability questions get checked against **forky**, not trixie or

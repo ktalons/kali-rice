@@ -1,0 +1,13 @@
+# kali-rice — bridge the clipboard to the Parallels host.
+#
+# prlcp, the Guest Tools clipboard daemon, transfers copies made in GTK apps
+# (xfce4-terminal, Firefox) but not copies owned by kitty or xclip — those
+# work inside the guest and silently never reach macOS. autocutsel re-owns
+# the CLIPBOARD selection after every copy, so prlcp always has an owner it
+# can read from and every copy crosses over.
+[Desktop Entry]
+Type=Application
+Name=autocutsel (clipboard bridge)
+Exec=autocutsel -selection CLIPBOARD
+StartupNotify=false
+Terminal=false
