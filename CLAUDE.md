@@ -98,6 +98,47 @@ understands. kitty's `copy_on_select clipboard` was never the problem; check
 *Both diagnosed 2026-07-31; the numlock line and the clipboard behavior were
 casualties of the desktop switch in commit 55a4063.*
 
+## Keyboard shortcuts live in xfconf, and `override` is a loaded gun
+
+`60-keys.sh` owns them. Three things about the
+`xfce4-keyboard-shortcuts` channel that are not obvious and each of which
+fails silently:
+
+1. **`/<base>/custom/override` means "custom is the complete list"**, not
+   "prefer custom". Setting it without first copying `/<base>/default/*` into
+   `/<base>/custom/*` deletes every stock shortcut — xflock4, xfrun4, the
+   display switcher — while the keys you did set work fine. `seed_custom()`
+   copies first, then flips it, which is what the Settings dialog does.
+2. **xfwm4 grabs keys before the command shortcuts see them.** A leftover WM
+   binding on a key you want makes your command look like it never fires.
+   XFCE ships `<Super>D` on show-desktop, which is exactly the key rofi
+   wants. `free_key()` clears both bases before binding.
+3. **The property name is a literal string but XFCE matches it by parsing**,
+   so `<Super><Shift>b` and `<Shift><Super>b` are one shortcut stored twice,
+   both live. `norm_key()` compares the modifier set plus keysym, treating
+   `<Primary>`/`<Control>`/`<Ctrl>` and `<Mod1>`/`<Alt>` as the same thing.
+
+The HTB keys bind `$HOME/.local/bin/htb-*` by absolute path on purpose.
+Shortcuts are spawned by xfsettingsd with the *session* PATH, which comes
+from the login shell and not from `.zshrc` — if `~/.local/bin` is not on it,
+every HTB key does nothing and reports nothing.
+
+Not restored from i3, deliberately: focus/move/split/resize (they drive a
+tiling layout that no longer exists) and the `XF86Audio*` keys (xfsettingsd
+already handles them).
+
+## Clipman and autocutsel have to be kept off each other's selection
+
+Clipman is configured with `add-primary-clipboard=false`. kitty runs
+`copy_on_select`, so mirroring PRIMARY into the history would record every
+mouse drag — and PRIMARY is also the selection autocutsel is deliberately
+kept away from. Run autocutsel on CLIPBOARD only. A second instance bridging
+PRIMARY↔CLIPBOARD turns copy-on-select into a feedback loop between the two
+selections.
+
+Images are off (`max-images-in-history=0`) because `Print` is bound to
+`htb-shot` and this guest has 4 GB.
+
 ## General
 
 - Package availability questions get checked against **forky**, not trixie or

@@ -78,5 +78,5 @@ if [ "$copied" -gt 0 ]; then
 elif [ -n "$(ls -A "$WALL_DIR" 2>/dev/null)" ]; then
   skip "wallpapers already in $WALL_DIR"
 else
-  warn "no wallpapers found — drop images in $WALL_DIR and re-run, or i3 will use a flat colour"
+  warn "no wallpapers found — drop images in $WALL_DIR and re-run, or the desktop stays a flat colour"
 fi

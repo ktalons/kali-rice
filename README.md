@@ -32,6 +32,29 @@ muscle memory carries across. The starship prompt shows the current box and
 target inline. tmux gets the same treatment, with the VPN IP in the status
 line so a reattached session still tells you where you are.
 
+**The keyboard.** The launcher and HTB bindings the i3 rice had, restored as
+XFCE shortcuts. `Super` is the Command key under Parallels.
+
+| Key | Does |
+|---|---|
+| `Super`+`Return` | kitty |
+| `Super`+`D` / `Super`+`Space` | rofi, app launcher |
+| `Super`+`Shift`+`D` | rofi, run a command |
+| `Super`+`W` | rofi, switch window |
+| `Super`+`E` / `Super`+`B` | thunar / firefox |
+| `Super`+`C` | clipboard history |
+| `Print` / `Shift`+`Print` | screenshot region / full screen, into the current box |
+| `Super`+`T` | prompt for a target and set it |
+| `Super`+`Shift`+`B` | prompt for a box and open it |
+| `Super`+`V` | VPN status in a terminal |
+| `Super`+`Q` / `Super`+`F` | close window / fullscreen |
+| `Super`+`1`–`4` | workspace |
+
+**The clipboard.** Clipman keeps the last 30 copied strings in the top panel,
+which is what you want when an IP, a hash and a password are all in flight on
+the same box. Images are excluded — `Print` is bound to a screenshot and a
+4 GB guest does not need every capture held in RAM.
+
 **The workflow.**
 
 ```
@@ -58,15 +81,15 @@ cd ~/Projects/kali-rice
 ./bootstrap.sh
 ```
 
-**Step `50` must run from inside a live XFCE session.** `xfconf-query` talks to
-`xfconfd` over the session bus; from a TTY, from another window manager, or
-over `prlctl` there is nothing to talk to and every setting is silently
-discarded. The step detects this, refuses to run, and says so loudly in the
-final summary rather than reporting success. If it skipped:
+**Steps `50` and `60` must run from inside a live XFCE session.**
+`xfconf-query` talks to `xfconfd` over the session bus; from a TTY, from
+another window manager, or over `prlctl` there is nothing to talk to and every
+setting is silently discarded. Both steps detect this, refuse to run, and say
+so loudly in the final summary rather than reporting success. If they skipped:
 
 ```sh
 # log into XFCE at the greeter first, then in a terminal there:
-./bootstrap.sh 50
+./bootstrap.sh 50 60
 ```
 
 One manual step remains by design — adding the HTB indicator. xfconf cannot
@@ -164,7 +187,10 @@ install/
   20-link.sh          backup-then-symlink into $HOME
   30-theme.sh         Catppuccin discovery, Qt palette, greeter
   40-htb.sh           ~/htb scaffold, commands on PATH, binfmt, wallpaper
-  50-xfce.sh          xfconf theming, bottom taskbar  [needs a live session]
+  50-xfce.sh          xfconf theming, bottom taskbar, clipman
+                                                      [needs a live session]
+  60-keys.sh          launcher + HTB keyboard shortcuts
+                                                      [needs a live session]
 dotfiles/             mirrors $HOME (rofi, kitty, starship, tmux, zsh, autostart)
 bin/                  htb-vpn, htb-box, htb-target, htb-shot, htb-genmon
 legacy/               the dropped i3 rice — see legacy/README.md
@@ -206,6 +232,32 @@ Instant fix if you ever end up with undraggable windows:
 ```sh
 xfconf-query -c xfwm4 -p /general/theme -s Kali-Dark
 ```
+
+## `override` means "custom is the whole list"
+
+XFCE keeps shortcuts in two trees per base — `/commands/default/<key>` and
+`/commands/custom/<key>` — and the custom tree only takes effect once
+`/commands/custom/override` is `true`.
+
+The trap is what that flag means. It is not "prefer custom where it exists",
+it is **"custom is the complete list"**. Flip it on a profile whose custom
+tree holds only your own three bindings and every stock shortcut that is not
+in it disappears: the lock screen, the run dialog, the display switcher.
+Nothing errors, and the keys you did set work perfectly, so it reads as a
+success.
+
+`60-keys.sh` therefore copies every default into the custom tree first and
+only then sets `override`, which is exactly what the Settings dialog does.
+The previous set is dumped to `~/.rice-backup/keyboard-shortcuts-<stamp>.txt`
+before anything is touched.
+
+The same file also unbinds collisions before claiming a key, because xfwm4
+grabs keys ahead of the command shortcuts — with `<Super>D` still on
+show-desktop, binding it to rofi looks like rofi is broken. And because XFCE
+matches shortcuts by parsing the property name rather than comparing it,
+`<Super><Shift>b` and `<Shift><Super>b` are one shortcut stored under two
+properties, both live and fighting. Collisions are matched on the modifier
+set plus the keysym, not on spelling.
 
 ## Licence
 

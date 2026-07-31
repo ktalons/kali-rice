@@ -9,43 +9,9 @@
 # not repeat: every set is read back and verified.
 
 step "session check"
-if ! xfconf-query -c xsettings -l >/dev/null 2>&1; then
-  # Loud, and recorded in the final summary — but not fatal, so a full
-  # bootstrap run from a TTY still completes every other step.
-  RICE_XFCE_SKIPPED=1
-  printf '\n'
-  warn "SKIPPING the entire XFCE step — no session on the bus."
-  warn "Nothing here was applied. The desktop is still stock."
-  warn ""
-  warn "Log into XFCE (pick 'Xfce Session' at the greeter), open a terminal"
-  warn "there, and run:   ./bootstrap.sh 50"
-  warn ""
-  warn "xfconf-query needs xfconfd on the session bus. From i3, a TTY, or over"
-  warn "prlctl there is nothing to talk to and every setting is discarded."
-  printf '\n'
-  return 0
-fi
-ok "xfconfd is reachable"
-
-# --- helpers ---------------------------------------------------------------
-
-# Set a property and read it back. Anything that does not stick is fatal,
-# not a warning — a theme that half-applied is worse than one that did not.
-xset() {
-  local channel="$1" prop="$2" type="$3" value="$4"
-  local current
-  current=$(xfconf-query -c "$channel" -p "$prop" 2>/dev/null || true)
-  if [ "$current" = "$value" ]; then
-    skip "$channel$prop already = $value"
-    return 0
-  fi
-  xfconf-query -c "$channel" -p "$prop" --create -t "$type" -s "$value" >/dev/null 2>&1 \
-    || die "failed to set $channel$prop"
-  current=$(xfconf-query -c "$channel" -p "$prop" 2>/dev/null || true)
-  [ "$current" = "$value" ] \
-    || die "$channel$prop did not stick (wanted '$value', got '$current')"
-  ok "$channel$prop = $value"
-}
+# xfset and xfconf_session_ready live in install/lib.sh — 60-keys.sh needs
+# them too, and a step has to work when run on its own (./bootstrap.sh 60).
+xfconf_session_ready || return 0
 
 # --- theme discovery -------------------------------------------------------
 step "locating the Catppuccin theme"
@@ -99,20 +65,20 @@ UIFONT="JetBrainsMono Nerd Font 10"
 
 # --- appearance ------------------------------------------------------------
 step "appearance"
-xset xsettings /Net/ThemeName          string "$THEME"
-xset xsettings /Net/IconThemeName      string "$ICONS"
-xset xsettings /Gtk/FontName           string "$UIFONT"
-xset xsettings /Gtk/MonospaceFontName  string "$UIFONT"
-xset xsettings /Net/EnableEventSounds  bool   false
+xfset xsettings /Net/ThemeName          string "$THEME"
+xfset xsettings /Net/IconThemeName      string "$ICONS"
+xfset xsettings /Gtk/FontName           string "$UIFONT"
+xfset xsettings /Gtk/MonospaceFontName  string "$UIFONT"
+xfset xsettings /Net/EnableEventSounds  bool   false
 
 step "window manager"
-xset xfwm4 /general/theme            string "$XFWM_THEME"
-xset xfwm4 /general/title_font       string "JetBrainsMono Nerd Font Bold 10"
-xset xfwm4 /general/use_compositing  bool   true
+xfset xfwm4 /general/theme            string "$XFWM_THEME"
+xfset xfwm4 /general/title_font       string "JetBrainsMono Nerd Font Bold 10"
+xfset xfwm4 /general/use_compositing  bool   true
 # Modest compositing only. This guest runs on virtio video; shadows are cheap,
 # heavy transparency is not.
-xset xfwm4 /general/frame_opacity     int  100
-xset xfwm4 /general/show_frame_shadow bool true
+xfset xfwm4 /general/frame_opacity     int  100
+xfset xfwm4 /general/show_frame_shadow bool true
 
 # Match the GTK config files to what xfconf now says, so applications started
 # outside the session (and the greeter) agree with the desktop.
@@ -146,33 +112,33 @@ fi
 
 step "top panel"
 # Kali's stock panel-1 keeps the menu, tray, clock and the HTB indicator.
-xset xfce4-panel /panels/panel-1/position-locked bool false
-xset xfce4-panel /panels/panel-1/size           uint 30
+xfset xfce4-panel /panels/panel-1/position-locked bool false
+xfset xfce4-panel /panels/panel-1/size           uint 30
 
 step "bottom taskbar"
 # A second panel holding nothing but window buttons — one button per open
 # window, with its title, across the bottom. This is the piece i3 could not
 # provide: its tab bar is a property of a container, not a task list.
 TASKLIST_ID=50
-xset xfce4-panel /plugins/plugin-$TASKLIST_ID                        string tasklist
-xset xfce4-panel /plugins/plugin-$TASKLIST_ID/grouping               bool   false
-xset xfce4-panel /plugins/plugin-$TASKLIST_ID/show-labels            bool   true
-xset xfce4-panel /plugins/plugin-$TASKLIST_ID/include-all-workspaces bool   true
-xset xfce4-panel /plugins/plugin-$TASKLIST_ID/flat-buttons           bool   false
-xset xfce4-panel /plugins/plugin-$TASKLIST_ID/window-scrolling       bool   false
-xset xfce4-panel /plugins/plugin-$TASKLIST_ID/show-handle            bool   false
-xset xfce4-panel /plugins/plugin-$TASKLIST_ID/sort-order             uint   0
+xfset xfce4-panel /plugins/plugin-$TASKLIST_ID                        string tasklist
+xfset xfce4-panel /plugins/plugin-$TASKLIST_ID/grouping               bool   false
+xfset xfce4-panel /plugins/plugin-$TASKLIST_ID/show-labels            bool   true
+xfset xfce4-panel /plugins/plugin-$TASKLIST_ID/include-all-workspaces bool   true
+xfset xfce4-panel /plugins/plugin-$TASKLIST_ID/flat-buttons           bool   false
+xfset xfce4-panel /plugins/plugin-$TASKLIST_ID/window-scrolling       bool   false
+xfset xfce4-panel /plugins/plugin-$TASKLIST_ID/show-handle            bool   false
+xfset xfce4-panel /plugins/plugin-$TASKLIST_ID/sort-order             uint   0
 
 # p=8 is the bottom-centre snap position. position-locked stays false so the
 # panel can simply be dragged if it lands somewhere unexpected.
-xset xfce4-panel /panels/panel-2/position        string "p=8;x=0;y=0"
-xset xfce4-panel /panels/panel-2/length          uint   100
-xset xfce4-panel /panels/panel-2/size            uint   34
-xset xfce4-panel /panels/panel-2/icon-size       uint   20
-xset xfce4-panel /panels/panel-2/position-locked bool   false
-xset xfce4-panel /panels/panel-2/nrows           uint   1
-xset xfce4-panel /panels/panel-2/enter-opacity   uint   100
-xset xfce4-panel /panels/panel-2/leave-opacity   uint   100
+xfset xfce4-panel /panels/panel-2/position        string "p=8;x=0;y=0"
+xfset xfce4-panel /panels/panel-2/length          uint   100
+xfset xfce4-panel /panels/panel-2/size            uint   34
+xfset xfce4-panel /panels/panel-2/icon-size       uint   20
+xfset xfce4-panel /panels/panel-2/position-locked bool   false
+xfset xfce4-panel /panels/panel-2/nrows           uint   1
+xfset xfce4-panel /panels/panel-2/enter-opacity   uint   100
+xfset xfce4-panel /panels/panel-2/leave-opacity   uint   100
 
 xfconf-query -c xfce4-panel -p /panels/panel-2/plugin-ids \
   -t int -s "$TASKLIST_ID" --force-array --create >/dev/null 2>&1 \
@@ -184,6 +150,65 @@ ok "panel-2 holds the tasklist"
 xfconf-query -c xfce4-panel -p /panels -t int -s 1 -t int -s 2 --force-array \
   >/dev/null 2>&1 || die "failed to register panel-2"
 ok "two panels registered"
+
+step "clipboard history"
+# Clipman keeps a scrollback of everything copied — the thing you want when
+# an IP, a hash and a password are all in flight on the same box.
+#
+# panel-1 is NOT rebuilt here. It already holds Kali's menu, tray and clock
+# plus the hand-added genmon, and writing a fresh plugin-ids array would wipe
+# every one of them. Read the array, append, write it back — and if the read
+# comes back empty, do nothing at all rather than guess.
+if ! pkg_installed xfce4-clipman-plugin; then
+  warn "xfce4-clipman-plugin not installed — run ./bootstrap.sh 00 first"
+else
+  # Reuse an existing clipman plugin if one is already in the layout,
+  # otherwise take the first free id from 51 up. Never assume an id is free:
+  # clobbering /plugins/plugin-N silently replaces whatever plugin N was.
+  CLIPMAN_ID=""
+  USED_IDS=$(xfconf-query -c xfce4-panel -l 2>/dev/null \
+    | sed -n 's|^/plugins/plugin-\([0-9]\{1,\}\)$|\1|p' | sort -n)
+  for id in $USED_IDS; do
+    if [ "$(xfconf-query -c xfce4-panel -p "/plugins/plugin-$id" 2>/dev/null)" = "clipman" ]; then
+      CLIPMAN_ID="$id"; break
+    fi
+  done
+  if [ -z "$CLIPMAN_ID" ]; then
+    CLIPMAN_ID=51
+    while printf '%s\n' "$USED_IDS" | grep -qx "$CLIPMAN_ID"; do
+      CLIPMAN_ID=$((CLIPMAN_ID + 1))
+    done
+  fi
+
+  xfset xfce4-panel /plugins/plugin-$CLIPMAN_ID string clipman
+
+  # Text only. Clipman's image history holds every screenshot in RAM, and
+  # htb-shot is bound to Print — that adds up fast in a 4 GB guest.
+  xfset xfce4-panel /plugins/plugin-$CLIPMAN_ID/add-primary-clipboard bool false
+  xfset xfce4-panel /plugins/plugin-$CLIPMAN_ID/save-on-quit          bool false
+  xfset xfce4-panel /plugins/plugin-$CLIPMAN_ID/max-texts-in-history  uint 30
+  xfset xfce4-panel /plugins/plugin-$CLIPMAN_ID/max-images-in-history uint 0
+
+  # add-primary-clipboard stays false deliberately: kitty is set to
+  # copy_on_select, so mirroring PRIMARY into the history would record every
+  # mouse drag, and it is also the selection autocutsel is kept away from.
+  P1_IDS=$(xfconf-query -c xfce4-panel -p /panels/panel-1/plugin-ids 2>/dev/null \
+    | sed -n 's/^\([0-9]\{1,\}\)$/\1/p')
+  if [ -z "$P1_IDS" ]; then
+    warn "could not read panel-1's plugin list — not touching it."
+    warn "Add clipman by hand: right-click the top panel -> Panel -> Add New Items..."
+  elif printf '%s\n' "$P1_IDS" | grep -qx "$CLIPMAN_ID"; then
+    skip "clipman (plugin-$CLIPMAN_ID) already on panel-1"
+  else
+    SET_ARGS=()
+    for id in $P1_IDS; do SET_ARGS+=(-t int -s "$id"); done
+    SET_ARGS+=(-t int -s "$CLIPMAN_ID")
+    xfconf-query -c xfce4-panel -p /panels/panel-1/plugin-ids \
+      --force-array --create "${SET_ARGS[@]}" >/dev/null 2>&1 \
+      || die "failed to append clipman to panel-1"
+    ok "clipman appended to panel-1 as plugin-$CLIPMAN_ID (kept $(printf '%s\n' "$P1_IDS" | wc -l | tr -d ' ') existing plugins)"
+  fi
+fi
 
 step "panel colours"
 # Catppuccin crust #11111b as a solid background on both panels.

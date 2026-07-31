@@ -46,7 +46,7 @@ else
   selected=("${steps[@]}")
 fi
 
-printf '\n\033[38;5;183m  kali-rice\033[0m  \033[2mCatppuccin Mocha · i3 · HTB\033[0m\n'
+printf '\n\033[38;5;183m  kali-rice\033[0m  \033[2mCatppuccin Mocha · XFCE · HTB\033[0m\n'
 printf '  \033[2mbackups -> %s\033[0m\n\n' "${RICE_BACKUP_DIR/#$HOME/\~}"
 
 for s in "${selected[@]}"; do
@@ -66,8 +66,8 @@ fi
 # outside — everything else ran, but the desktop is untouched. Say so last,
 # where it will actually be read.
 if [ "${RICE_XFCE_SKIPPED:-0}" = "1" ]; then
-  printf '\n  \033[38;5;174m▲ the XFCE step did not run — your desktop is still stock.\033[0m\n'
-  printf '  \033[38;5;180m  log into XFCE, then: ./bootstrap.sh 50\033[0m\n\n'
+  printf '\n  \033[38;5;174m▲ a session-only step did not run — desktop and/or keybindings are stock.\033[0m\n'
+  printf '  \033[38;5;180m  log into XFCE, then: ./bootstrap.sh 50 60\033[0m\n\n'
 else
   printf '  \033[2mlog out and pick "Xfce Session" at the greeter.\033[0m\n\n'
 fi

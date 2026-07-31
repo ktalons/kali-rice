@@ -129,3 +129,47 @@ git_ensure() {
 }
 
 have() { command -v "$1" >/dev/null 2>&1; }
+
+# --- xfconf ----------------------------------------------------------------
+
+# Set an xfconf property and read it back. Anything that does not stick is
+# fatal, not a warning — a desktop that half-applied is worse than one that
+# did not.
+#
+# Named xfset, not xset: `xset` is also the X11 binary, and a shell function
+# by that name silently shadows it for every step sourced afterwards.
+xfset() {
+  local channel="$1" prop="$2" type="$3" value="$4"
+  local current
+  current=$(xfconf-query -c "$channel" -p "$prop" 2>/dev/null || true)
+  if [ "$current" = "$value" ]; then
+    skip "$channel$prop already = $value"
+    return 0
+  fi
+  xfconf-query -c "$channel" -p "$prop" --create -t "$type" -s "$value" >/dev/null 2>&1 \
+    || die "failed to set $channel$prop"
+  current=$(xfconf-query -c "$channel" -p "$prop" 2>/dev/null || true)
+  [ "$current" = "$value" ] \
+    || die "$channel$prop did not stick (wanted '$value', got '$current')"
+  ok "$channel$prop = $value"
+}
+
+# Refuse to touch xfconf from outside a live session. xfconf-query talks to
+# xfconfd over the session bus; from a TTY, another WM, or prlctl there is
+# nothing to talk to and every setting is silently discarded. Callers `return`
+# on a non-zero result — the step is skipped, the run continues, and the
+# final summary says so.
+xfconf_session_ready() {
+  if xfconf-query -c xsettings -l >/dev/null 2>&1; then
+    ok "xfconfd is reachable"
+    return 0
+  fi
+  RICE_XFCE_SKIPPED=1
+  printf '\n'
+  warn "SKIPPING this step — no session on the bus. Nothing here was applied."
+  warn ""
+  warn "Log into XFCE (pick 'Xfce Session' at the greeter), open a terminal"
+  warn "there, and run:   ./bootstrap.sh 50 60"
+  printf '\n'
+  return 1
+}

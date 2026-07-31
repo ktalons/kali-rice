@@ -17,10 +17,11 @@ apt_ensure \
 step "XFCE panel plugins"
 # genmon renders the HTB indicator; whiskermenu is the app menu;
 # panel-profiles is what lets the bootstrap back up your panel layout
-# before touching it.
+# before touching it; clipman is the clipboard history — the thing you want
+# when an IP, a hash and a password are all in flight on the same box.
 apt_ensure \
   xfce4-genmon-plugin xfce4-whiskermenu-plugin xfce4-panel-profiles \
-  xfce4-pulseaudio-plugin xfce4-power-manager
+  xfce4-pulseaudio-plugin xfce4-power-manager xfce4-clipman-plugin
 
 step "desktop extras"
 # numlockx and autocutsel are session plumbing for this VM, not eye candy:
