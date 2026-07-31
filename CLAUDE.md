@@ -127,17 +127,31 @@ Not restored from i3, deliberately: focus/move/split/resize (they drive a
 tiling layout that no longer exists) and the `XF86Audio*` keys (xfsettingsd
 already handles them).
 
-## Clipman and autocutsel have to be kept off each other's selection
+## Run autocutsel on CLIPBOARD only
 
-Clipman is configured with `add-primary-clipboard=false`. kitty runs
-`copy_on_select`, so mirroring PRIMARY into the history would record every
-mouse drag — and PRIMARY is also the selection autocutsel is deliberately
-kept away from. Run autocutsel on CLIPBOARD only. A second instance bridging
-PRIMARY↔CLIPBOARD turns copy-on-select into a feedback loop between the two
-selections.
+One instance, `-selection CLIPBOARD`. Do not add a second one bridging
+PRIMARY: kitty runs `copy_on_select`, so every mouse drag already writes to
+PRIMARY, and wiring the two selections together turns that into a feedback
+loop where each selection keeps re-asserting the other.
 
-Images are off (`max-images-in-history=0`) because `Print` is bound to
-`htb-shot` and this guest has 4 GB.
+## Clipboard history was tried and removed
+
+`xfce4-clipman-plugin` was added in 1cba398 and taken back out in the commit
+after — the plugin errored on this guest. autocutsel already solves the copy
+-to-host problem, which was the part that actually mattered; the history was
+a nice-to-have.
+
+Removing the code was not enough on its own. The panel item and the
+`<Super>c` binding are state in the *guest*, so anyone who ran the one
+commit that shipped it would keep a broken plugin on the panel and a key
+bound to a command that no longer resolves. `50-xfce.sh` detaches the plugin
+and `60-keys.sh` unbinds the key, both idempotent and both silent once there
+is nothing left to undo. Same reasoning as the libfuse fix above: a repo edit
+does not reach a machine that already ran the old version.
+
+The package is left installed if it is already there — pulling packages out
+from under someone is not this repo's job. `sudo apt autoremove --purge
+xfce4-clipman-plugin xfce4-clipman` if you want it gone.
 
 ## General
 

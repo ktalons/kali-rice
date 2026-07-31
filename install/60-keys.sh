@@ -161,8 +161,21 @@ done <<'KEYS'
 <Super>w|rofi -show window
 <Super>e|thunar
 <Super>b|firefox
-<Super>c|xfce4-popup-clipman
 KEYS
+
+# <Super>c briefly opened a clipman history popup. The plugin errored on this
+# guest and the feature was dropped, but deleting the line above does not
+# unbind the key — it would just sit there launching a command that no longer
+# resolves, which is a dead key that reports nothing. Take it back out, and
+# only if it still holds the binding this repo set.
+STALE_C=$(xfconf-query -c "$KCHAN" -p '/commands/custom/<Super>c' 2>/dev/null || true)
+if [ "$STALE_C" = "xfce4-popup-clipman" ]; then
+  xfconf-query -c "$KCHAN" -p '/commands/custom/<Super>c' -r >/dev/null 2>&1 \
+    && ok "unbound <Super>c (clipman was removed)" \
+    || warn "could not unbind the stale <Super>c"
+else
+  skip "<Super>c is not bound to clipman"
+fi
 
 # --- HTB -------------------------------------------------------------------
 step "HTB workflow"

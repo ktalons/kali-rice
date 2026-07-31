@@ -42,18 +42,12 @@ XFCE shortcuts. `Super` is the Command key under Parallels.
 | `Super`+`Shift`+`D` | rofi, run a command |
 | `Super`+`W` | rofi, switch window |
 | `Super`+`E` / `Super`+`B` | thunar / firefox |
-| `Super`+`C` | clipboard history |
 | `Print` / `Shift`+`Print` | screenshot region / full screen, into the current box |
 | `Super`+`T` | prompt for a target and set it |
 | `Super`+`Shift`+`B` | prompt for a box and open it |
 | `Super`+`V` | VPN status in a terminal |
 | `Super`+`Q` / `Super`+`F` | close window / fullscreen |
 | `Super`+`1`–`4` | workspace |
-
-**The clipboard.** Clipman keeps the last 30 copied strings in the top panel,
-which is what you want when an IP, a hash and a password are all in flight on
-the same box. Images are excluded — `Print` is bound to a screenshot and a
-4 GB guest does not need every capture held in RAM.
 
 **The workflow.**
 
@@ -187,8 +181,7 @@ install/
   20-link.sh          backup-then-symlink into $HOME
   30-theme.sh         Catppuccin discovery, Qt palette, greeter
   40-htb.sh           ~/htb scaffold, commands on PATH, binfmt, wallpaper
-  50-xfce.sh          xfconf theming, bottom taskbar, clipman
-                                                      [needs a live session]
+  50-xfce.sh          xfconf theming, bottom taskbar  [needs a live session]
   60-keys.sh          launcher + HTB keyboard shortcuts
                                                       [needs a live session]
 dotfiles/             mirrors $HOME (rofi, kitty, starship, tmux, zsh, autostart)

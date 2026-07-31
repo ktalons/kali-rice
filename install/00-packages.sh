@@ -17,11 +17,17 @@ apt_ensure \
 step "XFCE panel plugins"
 # genmon renders the HTB indicator; whiskermenu is the app menu;
 # panel-profiles is what lets the bootstrap back up your panel layout
-# before touching it; clipman is the clipboard history — the thing you want
-# when an IP, a hash and a password are all in flight on the same box.
+# before touching it.
+#
+# xfce4-clipman-plugin is deliberately absent. A clipboard history was tried
+# here and the plugin errored on this guest; autocutsel already solves the
+# copy-to-host problem, which was the part that mattered. 50-xfce.sh removes
+# the panel item if an earlier run added it. The package itself is left
+# installed if you already have it — `sudo apt autoremove --purge
+# xfce4-clipman-plugin xfce4-clipman` if you want it gone.
 apt_ensure \
   xfce4-genmon-plugin xfce4-whiskermenu-plugin xfce4-panel-profiles \
-  xfce4-pulseaudio-plugin xfce4-power-manager xfce4-clipman-plugin
+  xfce4-pulseaudio-plugin xfce4-power-manager
 
 step "desktop extras"
 # numlockx and autocutsel are session plumbing for this VM, not eye candy:

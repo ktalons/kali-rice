@@ -151,62 +151,49 @@ xfconf-query -c xfce4-panel -p /panels -t int -s 1 -t int -s 2 --force-array \
   >/dev/null 2>&1 || die "failed to register panel-2"
 ok "two panels registered"
 
-step "clipboard history"
-# Clipman keeps a scrollback of everything copied — the thing you want when
-# an IP, a hash and a password are all in flight on the same box.
+step "clipman removal"
+# A clipboard history was added here and taken straight back out — the plugin
+# errored on this guest. autocutsel already carries copies to the host, which
+# was the actual problem worth solving; the history was a nice-to-have.
 #
-# panel-1 is NOT rebuilt here. It already holds Kali's menu, tray and clock
-# plus the hand-added genmon, and writing a fresh plugin-ids array would wipe
-# every one of them. Read the array, append, write it back — and if the read
-# comes back empty, do nothing at all rather than guess.
-if ! pkg_installed xfce4-clipman-plugin; then
-  warn "xfce4-clipman-plugin not installed — run ./bootstrap.sh 00 first"
-else
-  # Reuse an existing clipman plugin if one is already in the layout,
-  # otherwise take the first free id from 51 up. Never assume an id is free:
-  # clobbering /plugins/plugin-N silently replaces whatever plugin N was.
-  CLIPMAN_ID=""
-  USED_IDS=$(xfconf-query -c xfce4-panel -l 2>/dev/null \
-    | sed -n 's|^/plugins/plugin-\([0-9]\{1,\}\)$|\1|p' | sort -n)
-  for id in $USED_IDS; do
-    if [ "$(xfconf-query -c xfce4-panel -p "/plugins/plugin-$id" 2>/dev/null)" = "clipman" ]; then
-      CLIPMAN_ID="$id"; break
-    fi
-  done
-  if [ -z "$CLIPMAN_ID" ]; then
-    CLIPMAN_ID=51
-    while printf '%s\n' "$USED_IDS" | grep -qx "$CLIPMAN_ID"; do
-      CLIPMAN_ID=$((CLIPMAN_ID + 1))
-    done
+# This block only removes what that version added. Deleting the code alone
+# would leave a broken plugin sitting on the panel of anyone who ran it, so
+# the cleanup has to be state in the guest, same reasoning as the libfuse
+# note in CLAUDE.md. It is silent once there is nothing left to remove.
+CLIPMAN_ID=""
+for id in $(xfconf-query -c xfce4-panel -l 2>/dev/null \
+  | sed -n 's|^/plugins/plugin-\([0-9]\{1,\}\)$|\1|p' | sort -n); do
+  if [ "$(xfconf-query -c xfce4-panel -p "/plugins/plugin-$id" 2>/dev/null)" = "clipman" ]; then
+    CLIPMAN_ID="$id"; break
   fi
+done
 
-  xfset xfce4-panel /plugins/plugin-$CLIPMAN_ID string clipman
-
-  # Text only. Clipman's image history holds every screenshot in RAM, and
-  # htb-shot is bound to Print — that adds up fast in a 4 GB guest.
-  xfset xfce4-panel /plugins/plugin-$CLIPMAN_ID/add-primary-clipboard bool false
-  xfset xfce4-panel /plugins/plugin-$CLIPMAN_ID/save-on-quit          bool false
-  xfset xfce4-panel /plugins/plugin-$CLIPMAN_ID/max-texts-in-history  uint 30
-  xfset xfce4-panel /plugins/plugin-$CLIPMAN_ID/max-images-in-history uint 0
-
-  # add-primary-clipboard stays false deliberately: kitty is set to
-  # copy_on_select, so mirroring PRIMARY into the history would record every
-  # mouse drag, and it is also the selection autocutsel is kept away from.
+if [ -z "$CLIPMAN_ID" ]; then
+  skip "no clipman plugin in the panel layout"
+else
+  # Same read-modify-write as before, in reverse: keep every other id exactly
+  # as it is. If the array cannot be read, change nothing.
   P1_IDS=$(xfconf-query -c xfce4-panel -p /panels/panel-1/plugin-ids 2>/dev/null \
     | sed -n 's/^\([0-9]\{1,\}\)$/\1/p')
   if [ -z "$P1_IDS" ]; then
-    warn "could not read panel-1's plugin list — not touching it."
-    warn "Add clipman by hand: right-click the top panel -> Panel -> Add New Items..."
-  elif printf '%s\n' "$P1_IDS" | grep -qx "$CLIPMAN_ID"; then
-    skip "clipman (plugin-$CLIPMAN_ID) already on panel-1"
+    warn "could not read panel-1's plugin list — leaving it alone."
+    warn "Remove it by hand: right-click the clipman icon -> Remove"
   else
     SET_ARGS=()
-    for id in $P1_IDS; do SET_ARGS+=(-t int -s "$id"); done
-    SET_ARGS+=(-t int -s "$CLIPMAN_ID")
-    xfconf-query -c xfce4-panel -p /panels/panel-1/plugin-ids \
-      --force-array --create "${SET_ARGS[@]}" >/dev/null 2>&1 \
-      || die "failed to append clipman to panel-1"
-    ok "clipman appended to panel-1 as plugin-$CLIPMAN_ID (kept $(printf '%s\n' "$P1_IDS" | wc -l | tr -d ' ') existing plugins)"
+    for id in $P1_IDS; do
+      [ "$id" = "$CLIPMAN_ID" ] && continue
+      SET_ARGS+=(-t int -s "$id")
+    done
+    if [ ${#SET_ARGS[@]} -eq 0 ]; then
+      warn "clipman looks like panel-1's only plugin — not emptying the panel"
+    else
+      xfconf-query -c xfce4-panel -p /panels/panel-1/plugin-ids \
+        --force-array --create "${SET_ARGS[@]}" >/dev/null 2>&1 \
+        || die "failed to detach clipman from panel-1"
+      xfconf-query -c xfce4-panel -p "/plugins/plugin-$CLIPMAN_ID" \
+        --reset --recursive >/dev/null 2>&1 || true
+      ok "removed clipman (plugin-$CLIPMAN_ID) from panel-1"
+    fi
   fi
 fi
 
